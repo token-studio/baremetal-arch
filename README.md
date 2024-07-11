@@ -1,1 +1,1 @@
-GHA workbench for experimental
+Baremetal Arch Linux base archive.
