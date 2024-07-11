@@ -11,6 +11,9 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+  schedule:
+    - cron: "0 0 * * 5"
+
 env:
   MIRROR_PREFIX: https://cloudflaremirrors.com
   BOOTSTRAP_ARCHIVE_NAME: archlinux-bootstrap-x86_64.tar.zst
