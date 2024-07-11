@@ -1,0 +1,38 @@
+---
+# tasks file for install_packages
+- name: Install packages
+  community.general.pacman:
+    name:
+      - amd-ucode
+      - base
+      - btrfs-progs
+      - cloud-init
+      - efibootmgr
+      - efitools
+      - efivar
+      - fish
+      - fisher
+      - helm
+      - jq
+      - kubectl
+      - libvirt
+      - linux-hardened
+      - linux-hardened-headers
+      - lldpd
+      - mlocate
+      - nftables
+      - nvme-cli
+      - openssh
+      - paxtest
+      - pkgfile
+      - python
+      - sbctl
+      - sbsigntools
+      - sequoia-sq
+      - sudo
+      - vim
+      - yq
+      - zstd
+    state: latest
+    update_cache: true
+  notify: Create packages.yaml

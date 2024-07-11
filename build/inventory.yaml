@@ -1,0 +1,9 @@
+all:
+  children:
+    archChroot:
+      hosts:
+        bootstrap:
+          ansible_host: mnt
+      vars:
+        ansible_connection: chroot
+        ansible_chroot_exe: /usr/bin/arch-chroot

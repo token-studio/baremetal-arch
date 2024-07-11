@@ -1,0 +1,17 @@
+---
+# handlers file for install_packages
+- name: Gather the package facts
+  ansible.builtin.package_facts:
+    manager: pacman
+
+- name: Write package list to /packages.yaml
+  ansible.builtin.blockinfile:
+    create: true
+    path: /packages.yaml
+    block: "{{ ansible_facts.packages }}"
+    mode: 600
+
+- name: Store file into ./packages.yaml
+  ansible.builtin.fetch:
+    src: /packages.yaml
+    dest: ./packages.yaml

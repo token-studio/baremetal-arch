@@ -1,0 +1,189 @@
+# This is a basic workflow to help you get started with Actions
+
+name: CI
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the "main" branch
+  push:
+    branches: [ "main" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+env:
+  MIRROR_PREFIX: https://cloudflaremirrors.com
+  BOOTSTRAP_ARCHIVE_NAME: archlinux-bootstrap-x86_64.tar.zst
+  BOOTSTRAP_ARCHIVE_PREFIX: archlinux-bootstrap-x86_64
+  BOOTSTRAP_ARCHIVE_SUFIX: tar.zst
+  BOOTSTRAP_ARCHIVE_SIGNATURE_NAME: archlinux-bootstrap-x86_64.tar.zst.sig
+  BOOTSTRAP_DIR: root.x86_64
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  fetch:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    outputs:
+      bootstrap-signature-hash: ${{ steps.bootstrap-signature.outputs.signature-hash }}
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - uses: actions/checkout@v4
+
+      # Runs a set of commands using the runners shell
+      - name: Get bootstrap signature
+        run: curl -LO ${{ env.MIRROR_PREFIX }}/archlinux/iso/latest/${{ env.BOOTSTRAP_ARCHIVE_SIGNATURE_NAME }}
+      - name: print b2sum of signature
+        id: bootstrap-signature
+        run: b2sum --binary ${{ env.BOOTSTRAP_ARCHIVE_SIGNATURE_NAME }} | cut -d ' ' -f 1 | xargs printf "signature-hash=%s" >> "$GITHUB_OUTPUT"
+
+      - name: Cache bootstrap archive
+        id: cache-archive
+        uses: actions/cache@v4
+        with:
+          path: ./${{ env.BOOTSTRAP_ARCHIVE_NAME }}
+          key: bootstrap-archive-${{ steps.bootstrap-signature.outputs.signature-hash }}
+
+      - name: Get bootstrap archive 
+        if: ${{ steps.cache-archive.outputs.cache-hit != 'true' }}
+        run: curl -LO ${{ env.MIRROR_PREFIX }}/archlinux/iso/latest/${{ env.BOOTSTRAP_ARCHIVE_NAME }}
+
+      - name: Verify the archive
+        if: ${{ steps.cache-archive.outputs.cache-hit != 'true' }}
+        uses: docker://alpine:edge
+        with:
+          entrypoint: /bin/sh
+          args: fetch/verify.sh 
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bootstrap-archive
+          path: ${{ env.BOOTSTRAP_ARCHIVE_NAME }}
+          if-no-files-found: error
+
+  build:
+    runs-on: ubuntu-latest
+    needs: fetch
+    defaults:
+      run:
+        working-directory: build
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+      - name: Download bootstrap archive
+        uses: actions/download-artifact@v4
+        with:
+          name: bootstrap-archive
+          path: build/
+
+      - name: untar
+        run: |
+          sudo tar xpf ${{ env.BOOTSTRAP_ARCHIVE_NAME }}
+          ls -alh ${{ env.BOOTSTRAP_DIR }}
+      - name: Mount for chroot
+        run: |-
+          sudo mkdir mnt
+          sudo mount --bind root.x86_64 mnt
+
+      - name: get arch-chroot
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y arch-install-scripts
+
+      - name: Add mirrors for new root
+        run: sudo cp -r patch/* mnt/
+
+      - name: Run chroot
+        run: sudo $(which ansible-playbook) --inventory inventory.yaml playbook.yaml -v
+
+      - name: archive
+        run: sudo tar caf ${{ env.BOOTSTRAP_ARCHIVE_NAME }} ${{ env.BOOTSTRAP_DIR }}
+      - name: list files on archige
+        run: tar tf ${{ env.BOOTSTRAP_ARCHIVE_NAME }}
+        if: false
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bootstrap-archive
+          path: build/${{ env.BOOTSTRAP_ARCHIVE_NAME }}
+          if-no-files-found: error
+          overwrite: true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages.yaml
+          path: build/packages.yaml
+          if-no-files-found: error
+
+  push:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Download bootstrap archive
+        uses: actions/download-artifact@v4
+        with:
+          name: bootstrap-archive
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup oras command
+        uses: oras-project/setup-oras@v1
+
+      - name: Push artifact
+        run: oras push ghcr.io/${{ github.repository }}/${{ env.BOOTSTRAP_ARCHIVE_PREFIX }}:latest ${{ env.BOOTSTRAP_ARCHIVE_NAME }}
+
+  make-subvol:
+    runs-on: ubuntu-latest
+    needs: build
+    if: false
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Download bootstrap archive
+        uses: actions/download-artifact@v4
+        with:
+          name: bootstrap-archive
+
+      - name : untar
+        run: sudo tar xpf ${{ env.BOOTSTRAP_ARCHIVE_NAME }}
+
+      - name: mkfs.btrfs
+        run: |
+          truncate -s 100G arch.img
+          mkfs.btrfs arch.img
+
+      - name: mount
+        run: |
+          sudo mkdir mnt
+          sudo mount -t btrfs ./arch.img ./mnt -o defaults,noatime
+
+      - name: create subvol
+        run: |
+          cd ./mnt
+          sudo btrfs subvolume create arch
+      - name: copy bootstrap files
+        run: sudo mv ./${{ env.BOOTSTRAP_DIR }}/* ./mnt/arch/
+
+      - name: create snapshot
+        run: |
+          cd ./mnt
+          sudo btrfs subvolume snapshot -r ./arch ./out
+
+      - name: send
+        run: sudo btrfs send ./mnt/out | zstdmt -o ./out.btrfs.zst
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bootstrap-btrfs
+          path: out.btrfs.zst
+          if-no-files-found: error

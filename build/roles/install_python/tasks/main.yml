@@ -1,0 +1,8 @@
+---
+# tasks file for install_python
+- name: Keyring init
+  ansible.builtin.raw: pacman-key --init
+- name: Obtain keyring
+  ansible.builtin.raw: pacman-key --populate archlinux
+- name: Bootstrap a host without python installed
+  ansible.builtin.raw: pacman -Syu --noprogressbar --noconfirm python

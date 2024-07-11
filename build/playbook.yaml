@@ -1,0 +1,10 @@
+- name: Install Python
+  hosts: archChroot
+  gather_facts: false
+  roles:
+    - role: install_python
+- name: Init env
+  hosts: archChroot
+  roles:
+    - role: install_packages
+    - role: purge_cache
