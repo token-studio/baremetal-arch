@@ -8,3 +8,4 @@
   roles:
     - role: install_packages
     - role: purge_cache
+    - role: enable_systemd_units
