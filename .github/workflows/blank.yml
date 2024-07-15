@@ -130,7 +130,6 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - name: Download bootstrap archive
         uses: actions/download-artifact@v4
-        id: download_bootstrap
         with:
           name: bootstrap-archive
       - name: Download package list
@@ -151,9 +150,9 @@ jobs:
 
       - name: Push bootstrap archive
         run: |
-          oras push ghcr.io/${{ github.repository }}/${{ env.BOOTSTRAP_ARCHIVE_PREFIX }}:latest ${{ steps.download_bootstrap.outputs.download-path }}/${{ env.BOOTSTRAP_ARCHIVE_NAME }} \
-            --artifact-type $(file ${{ steps.download_bootstrap.outputs.download-path }}/${{ env.BOOTSTRAP_ARCHIVE_NAME }} --mime-type --brief)
+          oras push ghcr.io/${{ github.repository }}/${{ env.BOOTSTRAP_ARCHIVE_PREFIX }}:latest ${{ env.BOOTSTRAP_ARCHIVE_NAME }} \
+            --artifact-type $(file ${{ env.BOOTSTRAP_ARCHIVE_NAME }} --mime-type --brief)
       - name: Push package list
         run: |
-          oras push ghcr.io/${{ github.repository }}/package_list:latest ${{ steps.downloda_package_list.outputs.download-path }}/${{ env.PACKAGE_LIST_FILE }} \
+          oras push ghcr.io/${{ github.repository }}/package_list:latest build/${{ env.PACKAGE_LIST_FILE }} \
             --artifact-type $(file ${{ steps.downloda_package_list.outputs.download-path }}/${{ env.PACKAGE_LIST_FILE }} --mime-type --brief)
