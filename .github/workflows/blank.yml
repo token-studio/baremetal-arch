@@ -141,7 +141,7 @@ jobs:
         run: |
           pwd
           echo ${{ steps.downloda_package_list.outputs.download-path }}
-          ls ${{ steps.downloda_package_list.outputs.download-path }}
+          ls ${{ steps.downloda_package_list.outputs.download-path }}/bootstrap
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
