@@ -21,6 +21,7 @@ env:
   BOOTSTRAP_ARCHIVE_SUFIX: tar.zst
   BOOTSTRAP_ARCHIVE_SIGNATURE_NAME: archlinux-bootstrap-x86_64.tar.zst.sig
   BOOTSTRAP_DIR: root.x86_64
+  PACKAGE_LIST_FILE: packages.yaml
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -118,8 +119,8 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: packages.yaml
-          path: build/packages.yaml
+          name: ${{ env.PACKAGE_LIST_FILE }}
+          path: build/${{ env.PACKAGE_LIST_FILE }}
           if-no-files-found: error
 
   push:
@@ -131,6 +132,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: bootstrap-archive
+      - name: Download package list
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.PACKAGE_LIST_FILE }}
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
@@ -142,7 +147,11 @@ jobs:
       - name: Setup oras command
         uses: oras-project/setup-oras@v1
 
-      - name: Push artifact
+      - name: Push bootstrap archive
         run: |
           oras push ghcr.io/${{ github.repository }}/${{ env.BOOTSTRAP_ARCHIVE_PREFIX }}:latest ${{ env.BOOTSTRAP_ARCHIVE_NAME }} \
             --artifact-type $(file ${{ env.BOOTSTRAP_ARCHIVE_NAME }} --mime-type --brief)
+      - name: Push package list
+        run: |
+          oras push ghcr.io/${{ github.repository }}/package_list:latest ${{ env.PACKAGE_LIST_FILE }} \
+            --artifact-type $(file ${{ env.PACKAGE_LIST_FILE }} --mime-type --brief)
