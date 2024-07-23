@@ -20,7 +20,7 @@ env:
   BOOTSTRAP_ARCHIVE_PREFIX: archlinux-bootstrap-x86_64
   BOOTSTRAP_ARCHIVE_SUFIX: tar.zst
   BOOTSTRAP_ARCHIVE_SIGNATURE_NAME: archlinux-bootstrap-x86_64.tar.zst.sig
-  BOOTSTRAP_DIR: root.x86_64
+  BOOTSTRAP_DIR: root.x86_64/
   PACKAGE_LIST_FILE: packages.yaml
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
@@ -85,7 +85,7 @@ jobs:
 
       - name: untar
         run: |
-          sudo tar xpf ${{ env.BOOTSTRAP_ARCHIVE_NAME }}
+          sudo tar xpfS ${{ env.BOOTSTRAP_ARCHIVE_NAME }}
           ls -alh ${{ env.BOOTSTRAP_DIR }}
       - name: Mount for chroot
         run: |-
@@ -98,14 +98,14 @@ jobs:
           sudo apt-get install -y arch-install-scripts
 
       - name: Add mirrors for new root
-        run: sudo cp -r patch/* mnt/
+        run: sudo cp -ar patch/* mnt/
 
       - name: Run chroot
         run: sudo $(which ansible-playbook) --inventory inventory.yaml playbook.yaml -v
 
       - name: archive
-        run: sudo tar caf ${{ env.BOOTSTRAP_ARCHIVE_NAME }} ${{ env.BOOTSTRAP_DIR }}
-      - name: list files on archige
+        run: sudo tar cafpS ${{ env.BOOTSTRAP_ARCHIVE_NAME }} -C ${{ env.BOOTSTRAP_DIR }} .
+      - name: list files in archive
         run: tar tf ${{ env.BOOTSTRAP_ARCHIVE_NAME }}
         if: false
       - name: Upload artifact
