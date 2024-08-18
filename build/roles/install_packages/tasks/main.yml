@@ -34,6 +34,7 @@
       - sudo
       - tpm2-tss
       - vim
+      - virt-install
       - yq
       - zstd
     state: latest
