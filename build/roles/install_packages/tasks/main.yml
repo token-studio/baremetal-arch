@@ -22,6 +22,7 @@
       - linux-hardened-headers
       - lldpd
       - mlocate
+      - netplan
       - nftables
       - nvme-cli
       - openssh
