@@ -12,7 +12,7 @@
     - lldpd.service
     - nftables.service
     - pkgfile-update.timer
+    - plocate-updatedb.timer
     - sshd.service
-    - systemd-networkd
-    - systemd-resolved
-    - updatedb.timer
+    - systemd-networkd.service
+    - systemd-resolved.service

@@ -21,13 +21,13 @@
       - linux-hardened
       - linux-hardened-headers
       - lldpd
-      - mlocate
       - netplan
       - nftables
       - nvme-cli
       - openssh
       - paxtest
       - pkgfile
+      - plocate
       - python
       - sbctl
       - sbsigntools
