@@ -6,8 +6,10 @@
     enabled: true
   loop:
     - btrfs-scrub@-.timer
+    - cloud-config.service
     - cloud-final.service
-    - cloud-init.service
+    - cloud-init-local.service
+    - cloud-init-main.service
     - libvirtd.socket
     - lldpd.service
     - nftables.service
